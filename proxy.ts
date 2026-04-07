@@ -1,39 +1,29 @@
-import {
-  auth,
-  clerkMiddleware,
-  createRouteMatcher,
-} from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-const isPublicRoute = createRouteMatcher(["/signin", "/signup", "/", "/home"]);
-const isPublicAPiRoute = createRouteMatcher(["/api/videos"]);
+const isPublicRoute = createRouteMatcher([
+  "/home",
+  "/",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+]);
 
-export default clerkMiddleware(async (auth, req) => {
-  const { userId } = await auth();
-  const currentUrl = new URL(req.url);
-  const isHomePage = currentUrl.pathname === "/home";
-  const isApiRequest = currentUrl.pathname.startsWith("/api");
+export default clerkMiddleware( async(auth, req) => {
+  const { userId } =await auth();
 
-  if (userId && isPublicRoute(req) && !isHomePage) {
+  // ✅ If not logged in → allow only public routes
+  if (!userId && !isPublicRoute(req)) {
+    return NextResponse.redirect(new URL("/sign-in", req.url));
+  }
+
+  // ✅ If logged in → prevent going back to auth pages
+  if (userId && req.nextUrl.pathname.startsWith("/sign-in")) {
     return NextResponse.redirect(new URL("/home", req.url));
   }
-  // not logged in
-  if (!userId) {
-    if (!isPublicRoute(req) && !isPublicAPiRoute(req)) {
-      return NextResponse.redirect(new URL("/signin", req.url));
-    }
-    if (!isApiRequest && !isPublicAPiRoute(req)) {
-      return NextResponse.redirect(new URL("/signin", req.url));
-    }
-  }
+
   return NextResponse.next();
 });
 
 export const config = {
-  matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
-    "/(api|trpc)(.*)",
-  ],
+  matcher: ["/((?!_next|.*\\..*).*)", "/(api|trpc)(.*)"],
 };
