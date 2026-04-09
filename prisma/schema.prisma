@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   output     = "../generated/prisma"
   engineType = "client"
 }
@@ -15,7 +15,7 @@ model Video {
   publicId       String
   originalSize   String
   compressedSize String
-  duration       String
+  duration       Float
   createdAt      DateTime @default(now())
   updateAt       DateTime @updatedAt
 }
